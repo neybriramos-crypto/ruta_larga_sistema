@@ -1,5 +1,22 @@
 <?php
 session_start();
+error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
+
+// 1. SEGURIDAD E INACTIVIDAD
+$timeout = 600;
+if (!isset($_SESSION["usuario"])) {
+    header("Location: login.php");
+    exit();
+}
+
+if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_actividad'] > $timeout)) {
+    session_unset();
+    session_destroy();
+    header("Location: login.php?mensaje=sesion_caducada");
+    exit();
+}
+$_SESSION['ultima_actividad'] = time();
+
 // SEGURIDAD: Si no hay sesión iniciada, lo devolvemos al login
 if (!isset($_SESSION["usuario"])) {
     header("Location: login.php");

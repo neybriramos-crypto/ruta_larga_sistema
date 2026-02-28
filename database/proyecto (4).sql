@@ -2,10 +2,10 @@
 -- version 5.2.1
 -- https://www.phpmyadmin.net/
 --
--- Host: 127.0.0.1:3306
--- Generation Time: Feb 26, 2026 at 04:51 AM
--- Server version: 9.1.0
--- PHP Version: 8.3.14
+-- Servidor: 127.0.0.1
+-- Tiempo de generación: 28-02-2026 a las 05:02:18
+-- Versión del servidor: 10.4.32-MariaDB
+-- Versión de PHP: 8.0.30
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
@@ -18,130 +18,211 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8mb4 */;
 
 --
--- Database: `proyecto`
+-- Base de datos: `proyecto`
 --
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `choferes`
+-- Estructura de tabla para la tabla `choferes`
 --
 
-DROP TABLE IF EXISTS `choferes`;
-CREATE TABLE IF NOT EXISTS `choferes` (
-  `ID_chofer` int NOT NULL AUTO_INCREMENT,
+CREATE TABLE `choferes` (
+  `ID_chofer` int(11) NOT NULL,
   `RIF_cedula` varchar(30) NOT NULL,
   `nombre` varchar(128) NOT NULL,
-  `telefono` varchar(30) NOT NULL,
-  PRIMARY KEY (`ID_chofer`)
-) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `clientes`
---
-
-DROP TABLE IF EXISTS `clientes`;
-CREATE TABLE IF NOT EXISTS `clientes` (
-  `ID_cliente` int NOT NULL AUTO_INCREMENT,
-  `RIF_cedula` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  `nombre` varchar(128) COLLATE utf8mb4_general_ci NOT NULL,
-  `telefono` varchar(30) COLLATE utf8mb4_general_ci NOT NULL,
-  PRIMARY KEY (`ID_cliente`),
-  UNIQUE KEY `RIF_cedula` (`RIF_cedula`)
+  `telefono` varchar(30) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `fletes`
+-- Estructura de tabla para la tabla `clientes`
 --
 
-DROP TABLE IF EXISTS `fletes`;
-CREATE TABLE IF NOT EXISTS `fletes` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `id_cliente` int NOT NULL,
+CREATE TABLE `clientes` (
+  `ID_cliente` int(11) NOT NULL,
+  `RIF_cedula` varchar(30) NOT NULL,
+  `nombre` varchar(128) NOT NULL,
+  `telefono` varchar(30) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `clientes`
+--
+
+INSERT INTO `clientes` (`ID_cliente`, `RIF_cedula`, `nombre`, `telefono`) VALUES
+(1, 'V26541658', 'Luis Angel Galíndez Valera', '04145615165');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `fletes`
+--
+
+CREATE TABLE `fletes` (
+  `id` int(11) NOT NULL,
+  `id_cliente` int(11) NOT NULL,
   `origen` varchar(100) NOT NULL,
   `destino` varchar(100) NOT NULL,
   `estado` varchar(30) NOT NULL,
-  `valor` int NOT NULL,
-  `cancelado` tinyint NOT NULL,
-  `fecha` date NOT NULL,
-  PRIMARY KEY (`id`)
-) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+  `valor` int(11) NOT NULL,
+  `cancelado` tinyint(4) NOT NULL,
+  `fecha` date DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `fletes`
+-- Volcado de datos para la tabla `fletes`
 --
 
 INSERT INTO `fletes` (`id`, `id_cliente`, `origen`, `destino`, `estado`, `valor`, `cancelado`, `fecha`) VALUES
-(1, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 1, '0000-00-00'),
-(2, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 0, '0000-00-00'),
-(3, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 0, '0000-00-00'),
-(4, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 0, '0000-00-00'),
-(5, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 0, '0000-00-00'),
-(6, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 0, '0000-00-00');
+(1, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 0, '2024-01-01'),
+(2, 0, 'Los Teques', 'Caracas ', 'Completado', 0, 0, '2024-01-01');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `inventario`
+-- Estructura de tabla para la tabla `inventario`
 --
 
-DROP TABLE IF EXISTS `inventario`;
-CREATE TABLE IF NOT EXISTS `inventario` (
-  `id_producto` int NOT NULL AUTO_INCREMENT,
-  `codigo` int NOT NULL,
-  `nombre` int NOT NULL,
-  `descripcion` text COLLATE utf8mb4_general_ci NOT NULL,
-  `cantidad` int NOT NULL DEFAULT '0',
+CREATE TABLE `inventario` (
+  `id_producto` int(11) NOT NULL,
+  `codigo` varchar(50) NOT NULL,
+  `nombre` varchar(255) NOT NULL,
+  `descripcion` text NOT NULL,
+  `cantidad` int(11) NOT NULL DEFAULT 0,
   `precio_unidad` decimal(10,2) NOT NULL,
-  `fecha_actualizacion` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_producto`),
-  KEY `codigo` (`codigo`)
+  `fecha_actualizacion` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `usuarios`
+-- Estructura de tabla para la tabla `usuarios`
 --
 
-DROP TABLE IF EXISTS `usuarios`;
-CREATE TABLE IF NOT EXISTS `usuarios` (
-  `ID` int NOT NULL AUTO_INCREMENT,
-  `Email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  `Contraseña` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
-  PRIMARY KEY (`ID`),
-  UNIQUE KEY `mail` (`Email`)
-) ENGINE=InnoDB AUTO_INCREMENT=9 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+CREATE TABLE `usuarios` (
+  `ID` int(11) NOT NULL,
+  `Email` varchar(255) NOT NULL,
+  `Contraseña` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
--- Dumping data for table `usuarios`
+-- Volcado de datos para la tabla `usuarios`
 --
 
 INSERT INTO `usuarios` (`ID`, `Email`, `Contraseña`) VALUES
 (6, 'paezagnae@gmail.com', '$2y$10$0AqhLhWYEN2X3YR6fvErw.7'),
 (7, 'neybri@gmail.com', '$2y$10$UUkSwxvP.J4u7u/EGKsVp.A'),
-(8, 'Luisgalindez@gmail.com', '$2y$10$obPxscL8gNYl1h7YdI50uOD');
+(8, 'Luisgalindez@gmail.com', '$2y$10$obPxscL8gNYl1h7YdI50uOD'),
+(9, 'example@gmail.com', '$2y$10$NrGEbxKOmBevVGmuwkVxaehwWtU/7GLElSQO.uQry9ZILpfQj1vo.');
 
 -- --------------------------------------------------------
 
 --
--- Table structure for table `vehiculos`
+-- Estructura de tabla para la tabla `vehiculos`
 --
 
-DROP TABLE IF EXISTS `vehiculos`;
-CREATE TABLE IF NOT EXISTS `vehiculos` (
-  `id_vehiculo` int NOT NULL AUTO_INCREMENT,
-  `placa` varchar(15) COLLATE utf8mb4_general_ci DEFAULT NULL,
-  `marca` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `modelo` varchar(50) COLLATE utf8mb4_general_ci NOT NULL,
-  `cliente_id` int NOT NULL,
-  PRIMARY KEY (`id_vehiculo`),
-  UNIQUE KEY `placa` (`placa`)
+CREATE TABLE `vehiculos` (
+  `id_vehiculo` int(11) NOT NULL,
+  `placa` varchar(15) DEFAULT NULL,
+  `marca` varchar(50) NOT NULL,
+  `modelo` varchar(50) NOT NULL,
+  `cliente_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Volcado de datos para la tabla `vehiculos`
+--
+
+INSERT INTO `vehiculos` (`id_vehiculo`, `placa`, `marca`, `modelo`, `cliente_id`) VALUES
+(1, 'AGX05T', 'Chevrolet', 'Optra', 0);
+
+--
+-- Índices para tablas volcadas
+--
+
+--
+-- Indices de la tabla `choferes`
+--
+ALTER TABLE `choferes`
+  ADD PRIMARY KEY (`ID_chofer`),
+  ADD UNIQUE KEY `RIF_cedula` (`RIF_cedula`);
+
+--
+-- Indices de la tabla `clientes`
+--
+ALTER TABLE `clientes`
+  ADD PRIMARY KEY (`ID_cliente`),
+  ADD UNIQUE KEY `RIF_cedula` (`RIF_cedula`),
+  ADD UNIQUE KEY `telefono` (`telefono`);
+
+--
+-- Indices de la tabla `fletes`
+--
+ALTER TABLE `fletes`
+  ADD PRIMARY KEY (`id`);
+
+--
+-- Indices de la tabla `inventario`
+--
+ALTER TABLE `inventario`
+  ADD PRIMARY KEY (`id_producto`),
+  ADD KEY `codigo` (`codigo`);
+
+--
+-- Indices de la tabla `usuarios`
+--
+ALTER TABLE `usuarios`
+  ADD PRIMARY KEY (`ID`),
+  ADD UNIQUE KEY `mail` (`Email`);
+
+--
+-- Indices de la tabla `vehiculos`
+--
+ALTER TABLE `vehiculos`
+  ADD PRIMARY KEY (`id_vehiculo`),
+  ADD UNIQUE KEY `placa` (`placa`);
+
+--
+-- AUTO_INCREMENT de las tablas volcadas
+--
+
+--
+-- AUTO_INCREMENT de la tabla `choferes`
+--
+ALTER TABLE `choferes`
+  MODIFY `ID_chofer` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `clientes`
+--
+ALTER TABLE `clientes`
+  MODIFY `ID_cliente` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT de la tabla `fletes`
+--
+ALTER TABLE `fletes`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+
+--
+-- AUTO_INCREMENT de la tabla `inventario`
+--
+ALTER TABLE `inventario`
+  MODIFY `id_producto` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT de la tabla `usuarios`
+--
+ALTER TABLE `usuarios`
+  MODIFY `ID` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+
+--
+-- AUTO_INCREMENT de la tabla `vehiculos`
+--
+ALTER TABLE `vehiculos`
+  MODIFY `id_vehiculo` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
