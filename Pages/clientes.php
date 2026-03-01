@@ -16,104 +16,12 @@ if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_activida
 }
 $_SESSION['ultima_actividad'] = time();
 
-class Conexion
-{
-    protected $conexion;
-    public function __construct()
-    {
-        $this->conexion = new mysqli("localhost", "root", "", "proyecto");
-        $this->conexion->set_charset("utf8mb4");
-    }
-}
+require_once dirname(__DIR__) . "/app/presenter/clientesPresenter.php";
+$presenter = new ClientesPresenter();
+$data = $presenter->manejarPeticiones();
 
-class Cliente extends Conexion
-{
-    private $id, $rif, $nombre, $telefono;
-    public function setId($v)
-    {
-        $this->id = intval($v);
-    }
-    public function setRif($v)
-    {
-        $this->rif = substr(trim($v), 0, 12);
-    }
-    public function setNombre($v)
-    {
-        $this->nombre = substr(trim($v), 0, 40);
-    }
-    public function setTelefono($v)
-    {
-        $this->telefono = substr(trim($v), 0, 11);
-    }
-
-    public function listar()
-    {
-        return $this->conexion->query("SELECT * FROM clientes ORDER BY ID_cliente DESC");
-    }
-    public function insertar()
-    {
-        $stmt = $this->conexion->prepare("INSERT INTO clientes (RIF_cedula, nombre, telefono) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $this->rif, $this->nombre, $this->telefono);
-        return $stmt->execute();
-    }
-    public function modificar()
-    {
-        $stmt = $this->conexion->prepare("UPDATE clientes SET RIF_cedula=?, nombre=?, telefono=? WHERE ID_cliente=?");
-        $stmt->bind_param("sssi", $this->rif, $this->nombre, $this->telefono, $this->id);
-        return $stmt->execute();
-    }
-    public function eliminar($id)
-    {
-        $stmt = $this->conexion->prepare("DELETE FROM clientes WHERE ID_cliente = ?");
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
-    }
-}
-
-$clienteObj = new Cliente();
-$msg_js = "";
-
-// PROCESAMIENTO
-if (isset($_POST['registrar']) || isset($_POST['editar'])) {
-    // Unir RIF (Tipo + Número)
-    $tipo_doc = $_POST['tipo_doc'] ?? 'V';
-    $num_rif = preg_replace('/[^0-9]/', '', $_POST['RIF_cedula']);
-    $rif_final = $tipo_doc . $num_rif;
-
-    // Unir Teléfono (Operadora + Número)
-    $operadora = $_POST['operadora'] ?? '0414';
-    $num_telf = preg_replace('/[^0-9]/', '', $_POST['telefono_num']);
-    $telf_final = $operadora . $num_telf;
-
-    $nombre = trim($_POST['nombre']);
-
-    if (strlen($num_rif) < 6) {
-        $msg_js = "swalError('El documento es muy corto.');";
-    } elseif (strlen($num_telf) != 7) {
-        $msg_js = "swalError('El número de teléfono debe tener 7 dígitos después de la operadora.');";
-    } else {
-        $clienteObj->setRif($rif_final);
-        $clienteObj->setNombre($nombre);
-        $clienteObj->setTelefono($telf_final);
-
-        if (isset($_POST['registrar'])) {
-            $clienteObj->insertar();
-            header("Location: " . $_SERVER['PHP_SELF'] . "?status=reg");
-        } else {
-            $clienteObj->setId($_POST['ID_cliente']);
-            $clienteObj->modificar();
-            header("Location: " . $_SERVER['PHP_SELF'] . "?status=edit");
-        }
-        exit();
-    }
-}
-
-if (isset($_GET['delete'])) {
-    $clienteObj->eliminar(intval($_GET['delete']));
-    header("Location: " . $_SERVER['PHP_SELF'] . "?status=del");
-    exit();
-}
-$result = $clienteObj->listar();
+$result = $data['result'];
+$msg_js = $data['msg_js'];
 ?>
 
 <!DOCTYPE html>
