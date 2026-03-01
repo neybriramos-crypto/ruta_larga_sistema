@@ -1,68 +1,25 @@
 <?php
-require '../app/config/claseconexion.php'; 
-use PHPMailer\PHPMailer\PHPMailer;
-use PHPMailer\PHPMailer\Exception;
-use PHPMailer\PHPMailer\SMTP;
+session_start();
 
-require __DIR__ . '/../PHPMAILER/PHPMailer-master/src/Exception.php';
-require __DIR__ . '/../PHPMAILER/PHPMailer-master/src/PHPMailer.php';
-require __DIR__ . '/../PHPMAILER/PHPMailer-master/src/SMTP.php';
+// Si no hay un código en sesión, redirigir al inicio de la recuperación
+if (!isset($_SESSION['codigo_verificacion'])) {
+    header("Location: recuperarcontrasena.php");
+    exit();
+}
 
-session_start(); 
 $mensaje_status = "";
 $esError = false;
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
-    $correo = trim($_POST['email']); 
-    $objConexion = new Conexion();
-    $conn = $objConexion->conectar(); 
-
-    $sql = "SELECT ID FROM usuarios WHERE Email = ?";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("s", $correo);
-    $stmt->execute();
-    $resultado = $stmt->get_result();
-
-    if ($resultado && $resultado->num_rows === 1) {
-        $usuario = $resultado->fetch_assoc();
-        $id_usuario = $usuario['ID'];
-        $codigo = random_int(100000, 999999);
-        
-        $_SESSION['codigo_verificacion'] = $codigo;
-        $_SESSION['id_usuario'] = $id_usuario;
-
-        $sql_update = "UPDATE usuarios SET token_recuperacion = ? WHERE ID = ?";
-        $stmt_up = $conn->prepare($sql_update);
-        $stmt_up->bind_param("si", $codigo, $id_usuario);
-        $stmt_up->execute();
-
-        $mail = new PHPMailer(true);
-        try {
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = 'soporte.rutalarga@gmail.com'; 
-            $mail->Password   = 'lhyrofjopktqkzeh'; 
-            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-            $mail->Port       = 587;
-            $mail->CharSet    = 'UTF-8';
-            $mail->SMTPOptions = ['ssl' => ['verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true]];
-
-            $mail->setFrom('soporte.rutalarga@gmail.com', 'Soporte Ruta Larga');
-            $mail->addAddress($correo);
-            $mail->isHTML(true);
-            $mail->Subject = 'Codigo de recuperacion - Ruta Larga';
-            $mail->Body    = "Su codigo de verificacion es: <b style='font-size:20px;'>{$codigo}</b>";
-
-            $mail->send();
-            header("Location: verificar_codigo.php");
-            exit();
-        } catch (Exception $e) {
-            $mensaje_status = "Error al enviar: " . $mail->ErrorInfo;
-            $esError = true;
-        }
+    $codigo_ingresado = trim($_POST['codigo']);
+    
+    // Verificamos si el código coincide
+    if ($codigo_ingresado == $_SESSION['codigo_verificacion']) {
+        $_SESSION['paso_verificado'] = true; 
+        header("Location: cambiar_clave.php");
+        exit();
     } else {
-        $mensaje_status = "El correo no está registrado en el sistema.";
+        $mensaje_status = "El código ingresado es incorrecto. Intente de nuevo.";
         $esError = true;
     }
 }
@@ -73,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recuperar Contraseña | Ruta Larga</title>
+    <title>Verificar Código | Ruta Larga</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -87,6 +44,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
         .glass-card {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(5px);
+        }
+        /* Estilo para que el input de número no muestre las flechitas */
+        input::-webkit-outer-spin-button,
+        input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
         }
     </style>
 </head>
@@ -105,13 +68,13 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <div class="text-center mb-8">
                 <h2 class="text-3xl font-bold text-gray-800 border-b-4 border-gray-600 inline-block pb-2 italic">
-                    Recuperación</h2>
-                <p class="text-gray-500 mt-4 text-sm uppercase tracking-tighter">Ingrese su correo electrónico para recibir un código</p>
+                    Verificación</h2>
+                <p class="text-gray-500 mt-4 text-sm uppercase tracking-tighter">Ingrese el código de 6 dígitos enviado a su correo</p>
             </div>
 
             <?php if ($mensaje_status): ?>
                 <div class="mb-6 p-4 border-l-4 shadow-sm rounded flex items-center animate-pulse
-                    <?php echo $esError ? 'bg-red-50 border-red-500 text-red-700' : 'bg-green-50 border-green-500 text-green-700'; ?>">
+                    bg-red-50 border-red-500 text-red-700">
                     <svg class="w-5 h-5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
                     </svg>
@@ -121,28 +84,28 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
             <form action="" method="post" class="space-y-6">
                 <div>
-                    <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-widest">Correo Electrónico</label>
-                    <input type="email" name="email" required
-                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:bg-white outline-none transition-all placeholder-gray-300"
-                        placeholder="usuario@rutalarga.com">
+                    <label class="block text-xs font-bold text-gray-600 mb-2 uppercase tracking-widest text-center">Código de Seguridad</label>
+                    <input type="number" name="codigo" required 
+                        class="w-full px-4 py-4 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:bg-white outline-none transition-all text-center text-3xl font-bold tracking-[10px] placeholder-gray-300"
+                        placeholder="000000">
                 </div>
 
                 <div class="flex flex-col gap-3 pt-2">
                     <button type="submit"
                         class="w-full bg-[#666666] hover:bg-[#444444] text-white font-bold py-3.5 rounded-lg shadow-lg transform hover:-translate-y-1 transition-all duration-300 uppercase tracking-widest text-sm">
-                        Enviar Código
+                        Validar Código
                     </button>
 
-                    <a href="login.php"
+                    <a href="recuperarcontrasena.php"
                         class="w-full border-2 border-[#666666] text-[#666666] hover:bg-[#666666] hover:text-white font-bold py-3 rounded-lg text-center transition-all duration-300 uppercase tracking-widest text-sm">
-                        Volver al Login
+                        Reenviar Correo
                     </a>
                 </div>
             </form>
 
             <div class="mt-8 text-center border-t border-gray-100 pt-6">
                 <p class="text-[10px] text-gray-400 uppercase tracking-widest italic">
-                    ¿No recibes el código? Revisa tu carpeta de spam
+                    Este código expira al cerrar la sesión
                 </p>
             </div>
         </div>
