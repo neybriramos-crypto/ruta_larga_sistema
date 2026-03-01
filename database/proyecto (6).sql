@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1:3306
--- Tiempo de generación: 01-03-2026 a las 01:40:47
+-- Tiempo de generación: 01-03-2026 a las 22:20:27
 -- Versión del servidor: 9.1.0
 -- Versión de PHP: 8.3.14
 
@@ -134,18 +134,21 @@ CREATE TABLE IF NOT EXISTS `usuarios` (
   `ID` int NOT NULL AUTO_INCREMENT,
   `Email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
   `Contraseña` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NOT NULL,
+  `token_recuperacion` varchar(100) COLLATE utf8mb4_general_ci DEFAULT NULL,
+  `token_expiracion` datetime DEFAULT NULL,
   PRIMARY KEY (`ID`),
   UNIQUE KEY `mail` (`Email`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+) ENGINE=InnoDB AUTO_INCREMENT=15 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Volcado de datos para la tabla `usuarios`
 --
 
-INSERT INTO `usuarios` (`ID`, `Email`, `Contraseña`) VALUES
-(7, 'neybri@gmail.com', '$2y$10$UUkSwxvP.J4u7u/EGKsVp.A'),
-(8, 'Luisgalindez@gmail.com', '$2y$10$obPxscL8gNYl1h7YdI50uOD'),
-(13, 'a-j-v-r@hotmail.com', '$2y$10$lyjWFSaWQs.0PUL5TXjr2OdjIH8raOU9xIAKnQWmgL4kwpBACMCZ6');
+INSERT INTO `usuarios` (`ID`, `Email`, `Contraseña`, `token_recuperacion`, `token_expiracion`) VALUES
+(7, 'neybri@gmail.com', '$2y$10$UUkSwxvP.J4u7u/EGKsVp.A', NULL, NULL),
+(8, 'Luisgalindez@gmail.com', '$2y$10$obPxscL8gNYl1h7YdI50uOD', NULL, NULL),
+(13, 'a-j-v-r@hotmail.com', '$2y$10$lyjWFSaWQs.0PUL5TXjr2OdjIH8raOU9xIAKnQWmgL4kwpBACMCZ6', NULL, NULL),
+(14, 'neybriramos@gmail.com', '$2y$10$3GWls9j1a8XGKDR6Nf9QROGOmOk3uSJu8Yq1ms914F8RryCh0GzYq', '48ef4f13258e4c06fb2cc917260467b1988e2289', '2026-03-01 00:02:11');
 
 -- --------------------------------------------------------
 
