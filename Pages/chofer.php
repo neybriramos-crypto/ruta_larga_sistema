@@ -14,105 +14,12 @@ if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_activida
     header("Location: login.php?mensaje=sesion_caducada");
     exit();
 }
-$_SESSION['ultima_actividad'] = time();
+require_once dirname(__DIR__) . "/app/presenter/choferesPresenter.php";
+$presenter = new ChoferesPresenter();
+$data = $presenter->manejarPeticiones();
 
-class Conexion
-{
-    protected $conexion;
-    public function __construct()
-    {
-        $this->conexion = new mysqli("localhost", "root", "", "proyecto");
-        $this->conexion->set_charset("utf8mb4");
-    }
-}
-
-class Chofer extends Conexion
-{
-    private $id, $rif, $nombre, $telefono;
-
-    public function setId($v)
-    {
-        $this->id = intval($v);
-    }
-    public function setRif($v)
-    {
-        $this->rif = strtoupper(substr(trim($v), 0, 12));
-    }
-    public function setNombre($v)
-    {
-        $this->nombre = substr(trim($v), 0, 40);
-    }
-    public function setTelefono($v)
-    {
-        $this->telefono = substr(trim($v), 0, 11);
-    }
-
-    public function listar()
-    {
-        return $this->conexion->query("SELECT * FROM choferes ORDER BY ID_chofer DESC");
-    }
-
-    public function insertar()
-    {
-        $stmt = $this->conexion->prepare("INSERT INTO choferes (RIF_cedula, nombre, telefono) VALUES (?, ?, ?)");
-        $stmt->bind_param("sss", $this->rif, $this->nombre, $this->telefono);
-        return $stmt->execute();
-    }
-
-    public function modificar()
-    {
-        $stmt = $this->conexion->prepare("UPDATE choferes SET RIF_cedula=?, nombre=?, telefono=? WHERE ID_chofer=?");
-        $stmt->bind_param("sssi", $this->rif, $this->nombre, $this->telefono, $this->id);
-        return $stmt->execute();
-    }
-
-    public function eliminar($id)
-    {
-        $stmt = $this->conexion->prepare("DELETE FROM choferes WHERE ID_chofer = ?");
-        $stmt->bind_param("i", $id);
-        return $stmt->execute();
-    }
-}
-
-$choferObj = new Chofer();
-$msg_js = "";
-
-// 3. PROCESAMIENTO
-if (isset($_POST['registrar']) || isset($_POST['editar'])) {
-    $tipo = $_POST['tipo_doc'] ?? 'V';
-    $num_rif = preg_replace('/[^0-9]/', '', $_POST['RIF_cedula']);
-    $rif_final = $tipo . $num_rif;
-    $nombre = trim($_POST['nombre']);
-    $telf = preg_replace('/[^0-9]/', '', $_POST['telefono']);
-
-    if (strlen($num_rif) < 6) {
-        $msg_js = "swalError('El documento es demasiado corto.');";
-    } elseif (strlen($telf) != 11) {
-        $msg_js = "swalError('El teléfono debe tener 11 dígitos.');";
-    } else {
-        $choferObj->setRif($rif_final);
-        $choferObj->setNombre($nombre);
-        $choferObj->setTelefono($telf);
-
-        if (isset($_POST['registrar'])) {
-            $choferObj->insertar();
-            header("Location: " . $_SERVER['PHP_SELF'] . "?status=reg");
-        } else {
-            $choferObj->setId($_POST['ID_chofer']);
-            $choferObj->modificar();
-            header("Location: " . $_SERVER['PHP_SELF'] . "?status=edit");
-        }
-        exit();
-    }
-}
-
-if (isset($_GET['delete'])) {
-    $choferObj->eliminar(intval($_GET['delete']));
-    header("Location: " . $_SERVER['PHP_SELF'] . "?status=del");
-    exit();
-}
-
-$result = $choferObj->listar();
+$result = $data['result'];
+$msg_js = $data['msg_js'] ?? '';
 ?>
 
 <!DOCTYPE html>
