@@ -104,7 +104,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['email'])) {
                 // ENVIAR
                 $mail->send();
 
-                $mensaje_status = "✅ Correo enviado correctamente. Revisa tu bandeja o spam.";
+                $mensaje_status = "Correo enviado correctamente. Revisa tu bandeja o spam.";
 
             } catch (Exception $e) {
 
