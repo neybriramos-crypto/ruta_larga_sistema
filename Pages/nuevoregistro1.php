@@ -24,6 +24,16 @@ class Usuario {
         $this->conexion = $db->getConexion();
     }
 
+    // NUEVO MÉTODO: Verifica si el email ya existe en la base de datos
+    public function existeEmail() {
+        $sql = "SELECT Email FROM usuarios WHERE Email = ? LIMIT 1";
+        $stmt = $this->conexion->prepare($sql);
+        $stmt->bind_param("s", $this->email);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->num_rows > 0;
+    }
+
     public function registrar() {
         $hash = password_hash($this->password, PASSWORD_DEFAULT);
         $sql = "INSERT INTO usuarios (Email, Contraseña) VALUES (?, ?)";
@@ -54,12 +64,19 @@ if (isset($_POST["guardar"])) {
         $esError = true;
     } else {
         $usuario = new Usuario($email, $password);
-        if ($usuario->registrar()) {
-            header("Location: login.php?mensaje=registro_exitoso");
-            exit();
-        } else {
-            $mensaje = "Error: El correo ya está registrado.";
+        
+        // VALIDACIÓN: Comprobar duplicidad antes de registrar
+        if ($usuario->existeEmail()) {
+            $mensaje = "El correo electrónico ya está registrado. Intente con otro o inicie sesión.";
             $esError = true;
+        } else {
+            if ($usuario->registrar()) {
+                header("Location: login.php?mensaje=registro_exitoso");
+                exit();
+            } else {
+                $mensaje = "Ocurrió un error inesperado al registrar el usuario.";
+                $esError = true;
+            }
         }
     }
 }
@@ -84,9 +101,8 @@ if (isset($_POST["guardar"])) {
             background: rgba(255, 255, 255, 0.98);
             backdrop-filter: blur(10px);
         }
-        /* Clases para la validación visual */
-        .valid { color: #10b981; font-weight: bold; } /* Verde Tailwind */
-        .invalid { color: #9ca3af; } /* Gris Tailwind */
+        .valid { color: #10b981; font-weight: bold; }
+        .invalid { color: #9ca3af; }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -172,12 +188,9 @@ if (isset($_POST["guardar"])) {
 
     passwordInput.addEventListener('input', () => {
         const val = passwordInput.value;
-        
-        // Validar cada requisito
         Object.keys(requirements).forEach(key => {
             const req = requirements[key];
             const isValid = req.regex.test(val);
-            
             if (isValid) {
                 req.el.classList.remove('invalid');
                 req.el.classList.add('valid');
@@ -198,7 +211,6 @@ if (isset($_POST["guardar"])) {
             matchMsg.classList.add('hidden');
             return;
         }
-        
         matchMsg.classList.remove('hidden');
         if (passwordInput.value === confirmInput.value) {
             matchMsg.textContent = "✓ Las contraseñas coinciden";

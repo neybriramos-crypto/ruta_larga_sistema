@@ -40,12 +40,18 @@ class ReporteFlete extends Conexion {
     }
 
     public function insertar($fecha, $origen, $destino, $valor) {
+        // VALIDACIÓN PHP: No permitir mismo origen y destino
+        if (trim(strtolower($origen)) === trim(strtolower($destino))) { return false; }
+
         $stmt = $this->conexion->prepare("INSERT INTO fletes (fecha, origen, destino, valor, cancelado) VALUES (?, ?, ?, ?, 0)");
         $stmt->bind_param("sssd", $fecha, $origen, $destino, $valor);
         return $stmt->execute();
     }
 
     public function actualizar($id, $fecha, $origen, $destino, $valor) {
+        // VALIDACIÓN PHP: No permitir mismo origen y destino
+        if (trim(strtolower($origen)) === trim(strtolower($destino))) { return false; }
+
         $stmt = $this->conexion->prepare("UPDATE fletes SET fecha=?, origen=?, destino=?, valor=? WHERE id=?");
         $stmt->bind_param("sssdi", $fecha, $origen, $destino, $valor, $id);
         return $stmt->execute();
@@ -70,13 +76,19 @@ $reporte = new ReporteFlete($filtro_actual);
 
 // 3. PROCESAMIENTO DE ACCIONES
 if (isset($_POST['registrar_flete'])) {
-    $reporte->insertar($_POST['fecha'], $_POST['origen'], $_POST['destino'], $_POST['valor']);
-    header("Location: " . $_SERVER['PHP_SELF'] . "?status=success&filtro=" . $filtro_actual);
+    if ($reporte->insertar($_POST['fecha'], $_POST['origen'], $_POST['destino'], $_POST['valor'])) {
+        header("Location: " . $_SERVER['PHP_SELF'] . "?status=success&filtro=" . $filtro_actual);
+    } else {
+        header("Location: " . $_SERVER['PHP_SELF'] . "?status=error_ruta&filtro=" . $filtro_actual);
+    }
     exit();
 }
 if (isset($_POST['editar_flete'])) {
-    $reporte->actualizar($_POST['id_flete'], $_POST['fecha'], $_POST['origen'], $_POST['destino'], $_POST['valor']);
-    header("Location: " . $_SERVER['PHP_SELF'] . "?status=updated&filtro=" . $filtro_actual);
+    if ($reporte->actualizar($_POST['id_flete'], $_POST['fecha'], $_POST['origen'], $_POST['destino'], $_POST['valor'])) {
+        header("Location: " . $_SERVER['PHP_SELF'] . "?status=updated&filtro=" . $filtro_actual);
+    } else {
+        header("Location: " . $_SERVER['PHP_SELF'] . "?status=error_ruta&filtro=" . $filtro_actual);
+    }
     exit();
 }
 if (isset($_GET['delete_id'])) {
@@ -113,10 +125,8 @@ $result = $reporte->mostrar();
         .glass-card { background: rgba(255, 255, 255, 0.98); border-radius: 12px; border: none; }
         .btn-estado { cursor: pointer; border: none; transition: 0.3s; }
         .btn-estado:hover { opacity: 0.8; transform: scale(1.05); }
-        
         @media (max-width: 768px) {
             .h2-title { font-size: 1.4rem; text-align: center; color: white; }
-            .header-actions { flex-direction: column; }
             .btn-new { width: 100%; margin-top: 15px; }
         }
     </style>
@@ -200,12 +210,15 @@ $result = $reporte->mostrar();
 <div class="modal fade" id="modalFlete" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow-lg">
-            <form method="POST">
+            <form method="POST" onsubmit="return validarRuta(this)">
                 <div class="modal-header">
                     <h5 class="modal-title font-weight-bold">📝 Registrar Nuevo Flete</h5>
                 </div>
                 <div class="modal-body p-4">
-                    <div class="form-group"><label class="small font-weight-bold">FECHA</label><input type="date" name="fecha" class="form-control" required value="<?= date('Y-m-d') ?>"></div>
+                    <div class="form-group">
+                        <label class="small font-weight-bold">FECHA</label>
+                        <input type="date" name="fecha" class="form-control" required value="<?= date('Y-m-d') ?>">
+                    </div>
                     <div class="form-group"><label class="small font-weight-bold">ORIGEN</label><input type="text" name="origen" class="form-control" placeholder="Ciudad de salida" required></div>
                     <div class="form-group"><label class="small font-weight-bold">DESTINO</label><input type="text" name="destino" class="form-control" placeholder="Ciudad de llegada" required></div>
                     <div class="form-group"><label class="small font-weight-bold">MONTO PACTADO ($)</label><input type="number" step="0.01" name="valor" class="form-control form-control-lg text-primary font-weight-bold" placeholder="0.00" required></div>
@@ -222,7 +235,7 @@ $result = $reporte->mostrar();
 <div class="modal fade" id="modalEditarFlete" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content border-0 shadow-lg">
-            <form method="POST">
+            <form method="POST" onsubmit="return validarRuta(this)">
                 <div class="modal-header bg-info text-white">
                     <h5 class="modal-title font-weight-bold">✏️ Editar Información</h5>
                 </div>
@@ -251,15 +264,30 @@ $result = $reporte->mostrar();
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+// VALIDACIÓN JS DE RUTA
+function validarRuta(form) {
+    const origen = form.origen.value.trim().toLowerCase();
+    const destino = form.destino.value.trim().toLowerCase();
+    
+    if (origen === destino && origen !== "") {
+        Swal.fire({
+            icon: 'error',
+            title: 'Ruta inválida',
+            text: 'El origen y el destino no pueden ser el mismo lugar.',
+            confirmButtonColor: '#08082c'
+        });
+        return false;
+    }
+    return true;
+}
+
 $(document).ready(function() {
-    // Inicialización de Tabla Responsive
     $('#tablaFletes').DataTable({
         responsive: true,
         "order": [[ 0, "desc" ]],
         "language": { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Spanish.json" }
     });
 
-    // Cargar datos en Modal Editar
     $('#tablaFletes').on('click', '.btnEditar', function() {
         $('#edit_id').val($(this).data('id'));
         $('#edit_fecha').val($(this).data('fecha'));
@@ -269,11 +297,11 @@ $(document).ready(function() {
         $('#modalEditarFlete').modal('show');
     });
 
-    // Alertas de confirmación visual
     const status = new URLSearchParams(window.location.search).get('status');
     if (status === 'success') Swal.fire({ icon: 'success', title: 'Registrado', text: 'El flete se guardó correctamente', timer: 2000, showConfirmButton: false });
     if (status === 'updated') Swal.fire({ icon: 'info', title: 'Actualizado', text: 'Los cambios han sido aplicados', timer: 1500, showConfirmButton: false });
     if (status === 'deleted') Swal.fire({ icon: 'error', title: 'Eliminado', text: 'Registro borrado permanentemente', timer: 1500, showConfirmButton: false });
+    if (status === 'error_ruta') Swal.fire({ icon: 'warning', title: 'Error de Ruta', text: 'El origen y destino deben ser diferentes.', confirmButtonColor: '#f39c12' });
 });
 
 function confirmarEliminar(id, filtro) {
@@ -283,13 +311,10 @@ function confirmarEliminar(id, filtro) {
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
         confirmButtonText: 'Sí, borrar flete',
         cancelButtonText: 'Cancelar'
     }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = `?delete_id=${id}&filtro=${filtro}`;
-        }
+        if (result.isConfirmed) { window.location.href = `?delete_id=${id}&filtro=${filtro}`; }
     });
 }
 
@@ -304,9 +329,7 @@ function confirmarCambio(id, valorActual, filtro) {
         confirmButtonText: 'Sí, cambiar',
         cancelButtonText: 'No'
     }).then((result) => {
-        if (result.isConfirmed) {
-            window.location.href = `?id_cambio=${id}&valor=${valorActual}&filtro=${filtro}`;
-        }
+        if (result.isConfirmed) { window.location.href = `?id_cambio=${id}&valor=${valorActual}&filtro=${filtro}`; }
     });
 }
 </script>

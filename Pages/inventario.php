@@ -12,7 +12,7 @@ if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_activida
 }
 $_SESSION['ultima_actividad'] = time();
 
-// 2. CLASES DE CONEXIÓN E INVENTARIO
+// 2. CLASES
 class Conexion {
     protected $conexion;
     public function __construct() {
@@ -39,6 +39,15 @@ class Inventario extends Conexion {
         return $stmt->execute();
     }
 
+    // NUEVA FUNCIÓN: MOVIMIENTO (ENTRADA/SALIDA)
+    public function procesarMovimiento($id, $cantidad, $tipo) {
+        $operador = ($tipo == 'entrada') ? "+" : "-";
+        $sql = "UPDATE inventario SET cantidad = cantidad $operador ?, fecha_actualizacion=NOW() WHERE id_producto = ?";
+        $stmt = $this->conexion->prepare($sql);
+        $stmt->bind_param("ii", $cantidad, $id);
+        return $stmt->execute();
+    }
+
     public function eliminar($id) {
         $stmt = $this->conexion->prepare("DELETE FROM inventario WHERE id_producto = ?");
         $stmt->bind_param("i", $id);
@@ -48,20 +57,38 @@ class Inventario extends Conexion {
 
 $objInv = new Inventario();
 
-// 3. PROCESAMIENTO
+// 3. PROCESAMIENTO DE ACCIONES
 if (isset($_POST['registrar'])) {
-    $objInv->insertar($_POST['codigo'], $_POST['nombre'], $_POST['descripcion'], $_POST['cantidad'], $_POST['precio_unidad']);
-    header("Location: " . $_SERVER['PHP_SELF'] . "?status=reg"); exit();
+    $cod = trim($_POST['codigo']);
+    $nom = trim($_POST['nombre']);
+    $objInv->insertar($cod, $nom, $_POST['descripcion'], $_POST['cantidad'], $_POST['precio_unidad']);
+    header("Location: " . $_SERVER['PHP_SELF'] . "?status=reg&cod=" . urlencode($cod) . "&nom=" . urlencode($nom)); 
+    exit();
 }
 
 if (isset($_POST['editar'])) {
-    $objInv->modificar($_POST['id_producto'], $_POST['codigo'], $_POST['nombre'], $_POST['descripcion'], $_POST['cantidad'], $_POST['precio_unidad']);
-    header("Location: " . $_SERVER['PHP_SELF'] . "?status=edit"); exit();
+    $cod = trim($_POST['codigo']);
+    $nom = trim($_POST['nombre']);
+    $objInv->modificar($_POST['id_producto'], $cod, $nom, $_POST['descripcion'], $_POST['cantidad'], $_POST['precio_unidad']);
+    header("Location: " . $_SERVER['PHP_SELF'] . "?status=edit&cod=" . urlencode($cod) . "&nom=" . urlencode($nom)); 
+    exit();
+}
+
+// PROCESAR MOVIMIENTO (ENTRADA / SALIDA)
+if (isset($_POST['movimiento'])) {
+    $id = $_POST['id_mov'];
+    $cant = $_POST['cant_mov'];
+    $tipo = $_POST['tipo_mov'];
+    $nom = $_POST['nom_mov'];
+    $objInv->procesarMovimiento($id, $cant, $tipo);
+    header("Location: " . $_SERVER['PHP_SELF'] . "?status=mov&t=$tipo&p=" . urlencode($nom) . "&n=$cant");
+    exit();
 }
 
 if (isset($_GET['delete'])) {
     $objInv->eliminar(intval($_GET['delete']));
-    header("Location: " . $_SERVER['PHP_SELF'] . "?status=del"); exit();
+    header("Location: " . $_SERVER['PHP_SELF'] . "?status=del"); 
+    exit();
 }
 
 $result = $objInv->listar();
@@ -76,27 +103,14 @@ $result = $objInv->listar();
     <link rel="stylesheet" href="https://cdn.datatables.net/1.10.21/css/dataTables.bootstrap4.min.css">
     <link href="https://cdn.jsdelivr.net/npm/@sweetalert2/theme-bootstrap-4/bootstrap-4.css" rel="stylesheet">
     <style>
-    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; }
-    .navbar-custom { background-color: #08082c; }
-    .modal-header { background-color: #08082c; color: white; }
-    .badge-rif { background: #e8f5e9; color: #2e7d32; font-weight: bold; border: 1px solid #c8e6c9; }
-</style>
-    <style>
-    body { 
-        font-family: Georgia, 'Times New Roman', Times, serif; 
-        /* Configuración de la imagen de fondo */
-        background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('../assets/img/fondo.jpg');
-        background-size: cover;
-        background-position: center;
-        background-attachment: fixed;
-        background-repeat: no-repeat;
-    }
-    /* Glassmorphism para las tarjetas si prefieres un estilo más moderno */
-    .glass-card {
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(5px);
-    }
-</style>
+        body { 
+            font-family: Georgia, serif; 
+            background-image: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), url('../assets/img/fondo.jpg');
+            background-size: cover; background-attachment: fixed;
+        }
+        .navbar-custom { background-color: #08082c; }
+        .modal-header { background-color: #08082c; color: white; }
+    </style>
 </head>
 <body>
 
@@ -117,8 +131,8 @@ $result = $objInv->listar();
         <thead>
             <tr>
                 <th>Código</th>
-                <th>Producto / Descripción</th>
-                <th>Stock</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
                 <th>Precio Unit.</th>
                 <th class="text-center">Acciones</th>
             </tr>
@@ -128,27 +142,30 @@ $result = $objInv->listar();
             <tr>
                 <td class="font-weight-bold text-primary"><?= htmlspecialchars($fila['codigo']) ?></td>
                 <td>
-                    <div class="font-weight-bold"><?= htmlspecialchars($fila['nombre']) ?></div>
-                    <small class="text-muted italic"><?= htmlspecialchars($fila['descripcion']) ?></small>
+                    <strong><?= htmlspecialchars($fila['nombre']) ?></strong><br>
+                    <small><?= htmlspecialchars($fila['descripcion']) ?></small>
                 </td>
                 <td>
-                    <?php if($fila['cantidad'] > 5): ?>
-                        <span class="badge badge-pill badge-success p-2">In Stock: <?= $fila['cantidad'] ?></span>
-                    <?php else: ?>
-                        <span class="badge badge-pill badge-danger p-2">Bajo: <?= $fila['cantidad'] ?></span>
-                    <?php endif; ?>
+                    <span class="badge badge-pill <?= ($fila['cantidad'] > 5) ? 'badge-success' : 'badge-danger' ?> p-2">
+                        <?= $fila['cantidad'] ?> unid.
+                    </span>
                 </td>
-                <td class="text-precio">$<?= number_format($fila['precio_unidad'], 2) ?></td>
+                <td>$<?= number_format($fila['precio_unidad'], 2) ?></td>
                 <td class="text-center">
+                    <button class="btn btn-warning btn-sm btnMovimiento" 
+                            data-id="<?= $fila['id_producto'] ?>"
+                            data-nom="<?= htmlspecialchars($fila['nombre']) ?>"
+                            title="Entrada/Salida">⇅</button>
+                    
                     <button class="btn btn-info btn-sm btnEditar" 
                             data-id="<?= $fila['id_producto'] ?>"
                             data-cod="<?= htmlspecialchars($fila['codigo']) ?>"
                             data-nom="<?= htmlspecialchars($fila['nombre']) ?>"
                             data-des="<?= htmlspecialchars($fila['descripcion']) ?>"
                             data-can="<?= $fila['cantidad'] ?>"
-                            data-pre="<?= $fila['precio_unidad'] ?>"
-                            data-toggle="modal" data-target="#modalEditar">Editar</button>
-                    <button class="btn btn-danger btn-sm" onclick="confirmarEliminar(<?= $fila['id_producto'] ?>, '<?= $fila['nombre'] ?>')">Borrar</button>
+                            data-pre="<?= $fila['precio_unidad'] ?>">Editar</button>
+                    
+                    <button class="btn btn-danger btn-sm" onclick="confirmarEliminar(<?= $fila['id_producto'] ?>, '<?= addslashes($fila['nombre']) ?>')">Borrar</button>
                 </td>
             </tr>
             <?php endwhile; ?>
@@ -162,30 +179,15 @@ $result = $objInv->listar();
             <form method="POST">
                 <div class="modal-header"><h5>Registrar Producto</h5></div>
                 <div class="modal-body p-4">
-                    <div class="form-group">
-                        <label>Nombre del Producto</label>
-                        <input type="text" name="nombre" class="form-control" required>
-                    </div>
+                    <div class="form-group"><label>Nombre del Producto</label><input type="text" name="nombre" class="form-control" required></div>
                     <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label>Código</label>
-                            <input type="text" name="codigo" class="form-control" required>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label>Precio Unitario ($)</label>
-                            <input type="number" step="0.01" name="precio_unidad" class="form-control" required>
-                        </div>
+                        <div class="form-group col-md-6"><label>Código</label><input type="text" name="codigo" class="form-control" required></div>
+                        <div class="form-group col-md-6"><label>Precio ($)</label><input type="number" step="0.01" name="precio_unidad" class="form-control" required></div>
                     </div>
-                    <div class="form-group">
-                        <label>Descripción</label>
-                        <textarea name="descripcion" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Stock Inicial</label>
-                        <input type="number" name="cantidad" class="form-control" required>
-                    </div>
+                    <div class="form-group"><label>Descripción</label><textarea name="descripcion" class="form-control" rows="2"></textarea></div>
+                    <div class="form-group"><label>Cantidad</label><input type="number" name="cantidad" class="form-control" required></div>
                 </div>
-                <div class="modal-footer"><button type="submit" name="registrar" class="btn btn-success btn-block">Guardar en Base de Datos</button></div>
+                <div class="modal-footer"><button type="submit" name="registrar" class="btn btn-success btn-block">Guardar</button></div>
             </form>
         </div>
     </div>
@@ -195,33 +197,48 @@ $result = $objInv->listar();
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content border-0">
             <form method="POST">
-                <div class="modal-header"><h5>Editar Existencias</h5></div>
+                <div class="modal-header"><h5>Editar Producto</h5></div>
                 <div class="modal-body p-4">
                     <input type="hidden" name="id_producto" id="edit_id">
-                    <div class="form-group">
-                        <label>Producto</label>
-                        <input type="text" name="nombre" id="edit_nom" class="form-control" required>
-                    </div>
+                    <div class="form-group"><label>Nombre</label><input type="text" name="nombre" id="edit_nom" class="form-control" required></div>
                     <div class="form-row">
-                        <div class="form-group col-md-6">
-                            <label>Código</label>
-                            <input type="text" name="codigo" id="edit_cod" class="form-control" required>
-                        </div>
-                        <div class="form-group col-md-6">
-                            <label>Precio Unitario</label>
-                            <input type="number" step="0.01" name="precio_unidad" id="edit_pre" class="form-control" required>
-                        </div>
+                        <div class="form-group col-md-6"><label>Código</label><input type="text" name="codigo" id="edit_cod" class="form-control" required></div>
+                        <div class="form-group col-md-6"><label>Precio</label><input type="number" step="0.01" name="precio_unidad" id="edit_pre" class="form-control" required></div>
+                    </div>
+                    <div class="form-group"><label>Descripción</label><textarea name="descripcion" id="edit_des" class="form-control" rows="2"></textarea></div>
+                    <div class="form-group"><label>Cantidad Actual</label><input type="number" name="cantidad" id="edit_can" class="form-control" required></div>
+                </div>
+                <div class="modal-footer"><button type="submit" name="editar" class="btn btn-info btn-block">Actualizar</button></div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalMov" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+        <div class="modal-content border-0">
+            <form method="POST">
+                <div class="modal-header bg-warning"><h5 class="text-dark">Movimiento de Stock</h5></div>
+                <div class="modal-body p-4">
+                    <input type="hidden" name="id_mov" id="mov_id">
+                    <input type="hidden" name="nom_mov" id="mov_nom_hidden">
+                    <p class="text-center"><strong id="mov_nom_display"></strong></p>
+                    
+                    <div class="form-group">
+                        <label>Tipo de Movimiento</label>
+                        <select name="tipo_mov" class="form-control" required>
+                            <option value="entrada">📥 Entrada (+)</option>
+                            <option value="salida">📤 Salida (-)</option>
+                        </select>
                     </div>
                     <div class="form-group">
-                        <label>Descripción</label>
-                        <textarea name="descripcion" id="edit_des" class="form-control" rows="2"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>Cantidad Actual</label>
-                        <input type="number" name="cantidad" id="edit_can" class="form-control" required>
+                        <label>Cantidad</label>
+                        <input type="number" name="cant_mov" class="form-control" min="1" value="1" required>
                     </div>
                 </div>
-                <div class="modal-footer"><button type="submit" name="editar" class="btn btn-info btn-block">Actualizar Datos</button></div>
+                <div class="modal-footer">
+                    <button type="submit" name="movimiento" class="btn btn-warning btn-block">Procesar</button>
+                </div>
             </form>
         </div>
     </div>
@@ -235,33 +252,57 @@ $result = $objInv->listar();
 
 <script>
 $(document).ready(function() {
-    $('#tablaInventario').DataTable({ 
-        language: { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Spanish.json" } 
-    });
+    $('#tablaInventario').DataTable({ language: { "url": "//cdn.datatables.net/plug-ins/1.10.21/i18n/Spanish.json" } });
 
-    $('.btnEditar').on('click', function() {
+    // Llenar Modal Editar
+    $('#tablaInventario').on('click', '.btnEditar', function() {
         $('#edit_id').val($(this).data('id'));
         $('#edit_cod').val($(this).data('cod'));
         $('#edit_nom').val($(this).data('nom'));
         $('#edit_des').val($(this).data('des'));
         $('#edit_can').val($(this).data('can'));
         $('#edit_pre').val($(this).data('pre'));
+        $('#modalEditar').modal('show');
     });
 
-    const status = new URLSearchParams(window.location.search).get('status');
-    if(status === 'reg') Swal.fire({icon:'success', title:'Registrado', showConfirmButton:false, timer:1500});
-    if(status === 'edit') Swal.fire({icon:'info', title:'Actualizado', showConfirmButton:false, timer:1500});
-    if(status === 'del') Swal.fire({icon:'error', title:'Eliminado', showConfirmButton:false, timer:1500});
+    // Llenar Modal Movimiento
+    $('#tablaInventario').on('click', '.btnMovimiento', function() {
+        $('#mov_id').val($(this).data('id'));
+        $('#mov_nom_hidden').val($(this).data('nom'));
+        $('#mov_nom_display').text($(this).data('nom'));
+        $('#modalMov').modal('show');
+    });
+
+    // ALERTAS
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get('status');
+    
+    if (status === 'reg') {
+        Swal.fire({ icon: 'success', title: 'Registrado', text: 'Producto: ' + params.get('nom') });
+    } else if (status === 'edit') {
+        Swal.fire({ icon: 'info', title: 'Actualizado', text: 'Cambios en: ' + params.get('nom') });
+    } else if (status === 'mov') {
+        const tipo = params.get('t') === 'entrada' ? 'entrada' : 'salida';
+        const color = params.get('t') === 'entrada' ? '#28a745' : '#dc3545';
+        Swal.fire({ 
+            icon: 'success', 
+            title: 'Movimiento Exitoso', 
+            html: `Se procesó una <b>${tipo}</b> de <b>${params.get('n')}</b> unidades para ${params.get('p')}`,
+            confirmButtonColor: color
+        });
+    } else if (status === 'del') {
+        Swal.fire({ icon: 'error', title: 'Producto Eliminado', timer: 2000, showConfirmButton: false });
+    }
 });
 
 function confirmarEliminar(id, nombre) {
     Swal.fire({
         title: '¿Eliminar ' + nombre + '?',
-        text: "Esta acción no se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
-        confirmButtonText: 'Sí, borrar'
+        confirmButtonText: 'Sí, borrar',
+        cancelButtonText: 'Cancelar'
     }).then((result) => { if (result.isConfirmed) window.location.href = `?delete=${id}`; });
 }
 </script>
