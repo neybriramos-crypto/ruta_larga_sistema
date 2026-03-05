@@ -3,7 +3,7 @@ session_start();
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 
 // 1. SEGURIDAD E INACTIVIDAD
-$timeout = 600; //
+$timeout = 600; 
 if (!isset($_SESSION["usuario"])) {
     header("Location: login.php");
     exit();
@@ -14,14 +14,18 @@ if (isset($_SESSION['ultima_actividad']) && (time() - $_SESSION['ultima_activida
     header("Location: login.php?mensaje=sesion_caducada");
     exit();
 }
-$_SESSION['ultima_actividad'] = time(); //
+$_SESSION['ultima_actividad'] = time(); 
 
 // 2. CONEXIÓN A LA BASE DE DATOS
-$mysqli = new mysqli("localhost", "root", "", "proyecto"); //
+$mysqli = new mysqli("localhost", "root", "", "proyecto"); 
 $mysqli->set_charset("utf8mb4");
 
+if ($mysqli->connect_error) {
+    die("Error de conexión: " . $mysqli->connect_error);
+}
+
 // 3. CONSULTAS PARA KPI (Indicadores clave)
-function qCount($db, $sql) { //
+function qCount($db, $sql) { 
     try {
         $res = $db->query($sql);
         if ($res) { $f = $res->fetch_assoc(); return $f['total'] ?? 0; }
@@ -29,14 +33,28 @@ function qCount($db, $sql) { //
     return 0;
 }
 
-$totalFletes = qCount($mysqli, "SELECT COUNT(*) as total FROM fletes"); //
-$totalClientes = qCount($mysqli, "SELECT COUNT(*) as total FROM clientes"); //
-// Alerta si el stock es menor o igual a 5 unidades
-$alertasStock = qCount($mysqli, "SELECT COUNT(*) as total FROM inventario WHERE cantidad <= 5"); //
+$totalFletes = qCount($mysqli, "SELECT COUNT(*) as total FROM fletes"); 
+$totalClientes = qCount($mysqli, "SELECT COUNT(*) as total FROM clientes"); 
+$alertasStock = qCount($mysqli, "SELECT COUNT(*) as total FROM inventario WHERE cantidad <= 5"); 
 
-// 4. DATOS PARA EL GRÁFICO (Ejemplo mensual)
-$mesesLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun"]; //
-$datosGrafico = [12, 19, 15, 25, 22, 30]; //
+// 4. DATOS PARA EL GRÁFICO (DINÁMICOS)
+$mesesLabels = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
+$datosGrafico = array_fill(0, 12, 0); // Inicializa 12 meses en 0
+
+// Consulta fletes agrupados por mes del año actual
+$sqlGrafico = "SELECT MONTH(fecha) as mes, COUNT(*) as total 
+               FROM fletes 
+               WHERE YEAR(fecha) = YEAR(CURDATE()) 
+               GROUP BY MONTH(fecha)";
+
+$resGrafico = $mysqli->query($sqlGrafico);
+
+if ($resGrafico) {
+    while ($row = $resGrafico->fetch_assoc()) {
+        $indice = (int)$row['mes'] - 1; // Ajusta mes (1-12) a índice array (0-11)
+        $datosGrafico[$indice] = (int)$row['total'];
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -50,8 +68,8 @@ $datosGrafico = [12, 19, 15, 25, 22, 30]; //
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { 
-            font-family: Georgia, serif; 
-            background-image: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('../assets/img/fondo.jpg'); 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background-image: linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('../assets/img/fondo.jpg'); 
             background-size: cover; 
             background-attachment: fixed; 
         }
@@ -81,15 +99,9 @@ $datosGrafico = [12, 19, 15, 25, 22, 30]; //
             <div class="col-12 text-right">
                 <div class="btn-group shadow-sm">
                     <button type="button" class="btn btn-light btn-sm disabled font-weight-bold">Descargar Reportes:</button>
-                    <a href="reporte_excel.php?tipo=fletes" class="btn btn-excel btn-sm">
-                        <i class="ph ph-file-csv"></i> Fletes
-                    </a>
-                    <a href="reporte_excel.php?tipo=inventario" class="btn btn-excel btn-sm">
-                        <i class="ph ph-file-csv"></i> Inventario
-                    </a>
-                    <a href="reporte_excel.php?tipo=clientes" class="btn btn-excel btn-sm">
-                        <i class="ph ph-file-csv"></i> Clientes
-                    </a>
+                    <a href="reporte_excel.php?tipo=fletes" class="btn btn-excel btn-sm"><i class="ph ph-file-csv"></i> Fletes</a>
+                    <a href="reporte_excel.php?tipo=inventario" class="btn btn-excel btn-sm"><i class="ph ph-file-csv"></i> Inventario</a>
+                    <a href="reporte_excel.php?tipo=clientes" class="btn btn-excel btn-sm"><i class="ph ph-file-csv"></i> Clientes</a>
                 </div>
             </div>
         </div>
@@ -133,7 +145,7 @@ $datosGrafico = [12, 19, 15, 25, 22, 30]; //
         <div class="container-main mb-5">
             <div class="row">
                 <div class="col-lg-8 border-right">
-                    <h5 class="font-weight-bold text-uppercase mb-4">Rendimiento Logístico Mensual</h5>
+                    <h5 class="font-weight-bold text-uppercase mb-4">Fletes por Mes (Año Actual)</h5>
                     <div style="height: 350px;">
                         <canvas id="graficoPrincipal"></canvas>
                     </div>
@@ -168,8 +180,10 @@ $datosGrafico = [12, 19, 15, 25, 22, 30]; //
     <script>
         $(document).ready(function() {
             const ctx = document.getElementById('graficoPrincipal').getContext('2d');
+            
+            // Crear degradado para el área bajo la línea
             const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            gradient.addColorStop(0, 'rgba(8, 8, 44, 0.2)');
+            gradient.addColorStop(0, 'rgba(8, 8, 44, 0.4)');
             gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
 
             new Chart(ctx, {
@@ -177,12 +191,13 @@ $datosGrafico = [12, 19, 15, 25, 22, 30]; //
                 data: {
                     labels: <?php echo json_encode($mesesLabels); ?>,
                     datasets: [{
-                        label: 'Viajes',
+                        label: 'Número de Fletes',
                         data: <?php echo json_encode($datosGrafico); ?>,
                         borderColor: '#08082c',
                         backgroundColor: gradient,
                         borderWidth: 3,
                         pointBackgroundColor: '#ef6c00',
+                        pointRadius: 5,
                         fill: true,
                         tension: 0.4
                     }]
@@ -191,7 +206,18 @@ $datosGrafico = [12, 19, 15, 25, 22, 30]; //
                     responsive: true,
                     maintainAspectRatio: false,
                     scales: {
-                        y: { beginAtZero: true }
+                        y: { 
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1 // Asegura que solo se vean números enteros
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'bottom'
+                        }
                     }
                 }
             });

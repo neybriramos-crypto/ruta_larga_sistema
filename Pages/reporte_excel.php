@@ -1,55 +1,57 @@
 <?php
-// 1. SEGURIDAD
 session_start();
-if (!isset($_SESSION["usuario"])) {
-    exit("Acceso denegado");
-}
+if (!isset($_SESSION["usuario"])) exit("Acceso denegado");
 
-// 2. CONEXIÓN
 $mysqli = new mysqli("localhost", "root", "", "proyecto");
-$mysqli->set_charset("utf8");
+$mysqli->set_charset("utf8mb4");
 
-// 3. DETERMINAR TABLA Y NOMBRE DE ARCHIVO
+$permitidos = ['fletes', 'inventario', 'clientes'];
 $tipo = $_GET['tipo'] ?? 'fletes';
-$nombre_archivo = "Reporte_" . ucfirst($tipo) . "_" . date('Ymd') . ".csv";
+if (!in_array($tipo, $permitidos)) exit("Reporte inválido");
 
-// 4. CABECERAS PARA DESCARGA DE CSV (Sin errores de seguridad)
+// 1. Cabeceras para CSV (Excel no dará error de formato con .csv)
 header('Content-Type: text/csv; charset=utf-8');
-header('Content-Disposition: attachment; filename="' . $nombre_archivo . '";');
+header('Content-Disposition: attachment; filename="Reporte_'.$tipo.'_'.date('Y-m-d').'.csv"');
 
-// Crear un puntero de salida para PHP
+// 2. Abrir la salida
 $salida = fopen('php://output', 'w');
 
-// Añadir el BOM para que Excel reconozca los acentos correctamente en Windows
+// 3. EL TRUCO: Escribir el BOM UTF-8 para que Excel reconozca los acentos
 fprintf($salida, chr(0xEF).chr(0xBB).chr(0xBF));
 
-// 5. CONFIGURAR CONSULTA SEGÚN EL TIPO
+// 4. EL OTRO TRUCO: Forzar el separador para que Excel no ponga todo en una sola celda
+// Esto le dice a Excel: "Usa la coma como separador de columnas"
+fwrite($salida, "sep=,\n");
+
+// 5. Consultas
 switch($tipo) {
     case 'inventario':
-        $sql = "SELECT codigo AS 'CODIGO', nombre AS 'PRODUCTO', cantidad AS 'STOCK', precio_unidad AS 'PRECIO' FROM inventario";
+        $sql = "SELECT codigo, nombre, cantidad, precio_unidad FROM inventario";
         break;
     case 'clientes':
-        $sql = "SELECT RIF_cedula AS 'IDENTIFICACION', nombre AS 'NOMBRE', telefono AS 'TELEFONO' FROM clientes";
+        $sql = "SELECT RIF_cedula, nombre, telefono FROM clientes";
         break;
     default:
-        $sql = "SELECT * FROM fletes";
-        break;
+        $sql = "SELECT id, destino, fecha, estado FROM fletes";
 }
 
-$resultado = $mysqli->query($sql);
+$res = $mysqli->query($sql);
 
-if ($resultado) {
-    // 6. INSERTAR ENCABEZADOS DE COLUMNA
-    $columnas = [];
-    $info_campos = $resultado->fetch_fields();
-    foreach ($info_campos as $campo) {
-        $columnas[] = $campo->name;
-    }
-    fputcsv($salida, $columnas, ";"); // Usamos punto y coma para mejor compatibilidad con Excel en español
+if ($res) {
+    // Encabezados
+    $campos = $res->fetch_fields();
+    $head = [];
+    foreach ($campos as $c) $head[] = strtoupper($c->name);
+    fputcsv($salida, $head, ",");
 
-    // 7. INSERTAR DATOS
-    while ($fila = $resultado->fetch_assoc()) {
-        fputcsv($salida, $fila, ";");
+    // Datos
+    while ($fila = $res->fetch_assoc()) {
+        // Limpiamos saltos de línea para no romper las filas de Excel
+        $fila_limpia = array_map(function($v) { 
+            return str_replace(["\r", "\n"], ' ', $v); 
+        }, $fila);
+        
+        fputcsv($salida, $fila_limpia, ",");
     }
 }
 
