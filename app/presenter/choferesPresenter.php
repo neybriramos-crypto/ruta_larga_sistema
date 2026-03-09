@@ -1,7 +1,7 @@
 <?php
 require_once dirname(__DIR__) . "/model/choferModel.php";
 
-class ChoferPresenter
+class ChoferesPresenter
 {
     public function manejarPeticiones()
     {
