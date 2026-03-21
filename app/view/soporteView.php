@@ -54,7 +54,7 @@
       </div>
 
       <form id="contactForm" class="space-y-6" action="https://formspree.io/f/mlgwvpqv" method="POST">
-        <input type="hidden" name="_next" value="http://rutalarga/ruta_larga_sistema/app/view/loginView.php">
+        <input type="hidden" name="_next" value="http://rutalarga/app/view/loginView.php">
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div class="space-y-2">
@@ -135,7 +135,7 @@
             timer: 3000,
             timerProgressBar: true
           }).then(() => {
-            window.location.href = "http://rutalarga/ruta_larga_sistema/app/view/loginView.php";
+            window.location.href = "http://rutalarga/app/view/loginView.php";
           });
         } else {
           Swal.fire({

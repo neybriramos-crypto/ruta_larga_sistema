@@ -5,7 +5,6 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\SMTP;
 
-// Carga de PHPMailer desde la raíz del proyecto (Verifica que estas rutas existan en la nueva PC)
 require __DIR__ . '/../../PHPMAILER/PHPMailer-master/src/Exception.php';
 require __DIR__ . '/../../PHPMAILER/PHPMailer-master/src/PHPMailer.php';
 require __DIR__ . '/../../PHPMAILER/PHPMailer-master/src/SMTP.php';
@@ -40,11 +39,24 @@ class RecuperacionController {
                               </script>";
                         exit();
                     } else {
-                        // Error al enviar email (El Debug de PHPMailer se mostrará antes de este alert si hay error)
-                        echo "<script>
-                                alert('No se pudo enviar el correo. Verifique la configuración SMTP o su conexión a internet.');
-                                window.location.href = '/app/view/recuperarcontrasena.php';
-                              </script>";
+                        // Error al enviar email
+                        echo "
+                        <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+                        <script>
+                            document.addEventListener('DOMContentLoaded', function() {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: '¡Error!',
+                                    text: 'No se pudo enviar el correo. Verifique la configuración SMTP o su conexión a internet.',
+                                    confirmButtonColor: '#3085d6',
+                                    confirmButtonText: 'Entendido'
+                                }).then((result) => {
+                                    if (result.isConfirmed) {
+                                        window.location.href = '/app/view/recuperarcontrasena.php';
+                                    }
+                                });
+                            });
+                        </script>";
                         exit();
                     }
                 }
@@ -59,8 +71,6 @@ class RecuperacionController {
     private function enviarEmail($correo, $codigo, $nombre) {
         $mail = new PHPMailer(true);
         try {
-            // --- CONFIGURACIÓN DEL SERVIDOR ---
-            // Cambia a SMTP::DEBUG_OFF cuando ya funcione en la otra PC
             $mail->SMTPDebug = SMTP::DEBUG_SERVER; 
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com';
