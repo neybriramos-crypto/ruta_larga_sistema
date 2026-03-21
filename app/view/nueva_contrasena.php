@@ -34,7 +34,6 @@ if (isset($resultado['status']) && $resultado['status'] === 'success') {
         .invalid { color: #9ca3af; }
         button:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
         
-        /* Animación suave para el modal */
         .fade-in { animation: fadeIn 0.3s ease-out; }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-10px); }

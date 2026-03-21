@@ -18,7 +18,6 @@ class RecuperacionController {
 
         $recuObj = new Recuperacion();
 
-        // Inyectamos el script de SweetAlert2 (CDN) para que funcione en las respuestas
         echo '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>';
 
         if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['enviar_peticion'])) {
@@ -59,7 +58,6 @@ class RecuperacionController {
                     }
                 }
             } else {
-                // Usuario no encontrado con SweetAlert
                 echo "<script>
                     Swal.fire({
                         icon: 'warning',
@@ -78,7 +76,6 @@ class RecuperacionController {
     private function enviarEmail($correo, $codigo, $nombre) {
         $mail = new PHPMailer(true);
         try {
-            // Desactiva el Debug para producción o si el modal no se visualiza bien
             $mail->SMTPDebug = 0; 
     
             $mail->isSMTP();
