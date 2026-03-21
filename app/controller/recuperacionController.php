@@ -5,6 +5,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 use PHPMailer\PHPMailer\SMTP;
 
+// Carga de PHPMailer desde la raíz del proyecto (Verifica que estas rutas existan en la nueva PC)
 require __DIR__ . '/../../PHPMAILER/PHPMailer-master/src/Exception.php';
 require __DIR__ . '/../../PHPMAILER/PHPMailer-master/src/PHPMailer.php';
 require __DIR__ . '/../../PHPMAILER/PHPMailer-master/src/SMTP.php';
@@ -18,56 +19,38 @@ class RecuperacionController {
 
         $recuObj = new Recuperacion();
 
-        echo '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>';
-
         if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST['enviar_peticion'])) {
             $correo = trim($_POST['email_recuperar']);
             $usuario = $recuObj->buscarUsuarioPorEmail($correo);
 
             if ($usuario) {
+                // Generar código de 6 dígitos
                 $codigo = random_int(100000, 999999);
                 
+                // Guardar código y fecha en la base de datos
                 if ($recuObj->actualizarToken($usuario['ID'], $codigo)) {
                     $_SESSION['id_usuario_recu'] = $usuario['ID'];
                     $_SESSION['email_recu'] = $correo;
 
+                    // Intentar enviar el correo
                     if ($this->enviarEmail($correo, $codigo, $usuario['nombre'] ?? 'Usuario')) {
+                        // REDIRECCIÓN EXITOSA
                         echo "<script>
-                            Swal.fire({
-                                icon: 'success',
-                                title: '¡Código Enviado!',
-                                text: 'Revisa tu bandeja de entrada.',
-                                confirmButtonColor: '#08082c'
-                            }).then(() => {
                                 window.location.href = '/app/view/verificar_codigoView.php';
-                            });
-                        </script>";
+                              </script>";
                         exit();
                     } else {
+                        // Error al enviar email (El Debug de PHPMailer se mostrará antes de este alert si hay error)
                         echo "<script>
-                            Swal.fire({
-                                icon: 'error',
-                                title: 'Error de envío',
-                                text: 'No se pudo enviar el correo. Revise su conexión.',
-                                confirmButtonColor: '#08082c'
-                            }).then(() => {
+                                alert('No se pudo enviar el correo. Verifique la configuración SMTP o su conexión a internet.');
                                 window.location.href = '/app/view/recuperarcontrasena.php';
-                            });
-                        </script>";
+                              </script>";
                         exit();
                     }
                 }
             } else {
-                echo "<script>
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Usuario no encontrado',
-                        text: 'El correo ingresado no está registrado en nuestro sistema.',
-                        confirmButtonColor: '#08082c'
-                    }).then(() => {
-                        window.location.href = '/app/view/recuperarcontrasena.php';
-                    });
-                </script>";
+                // Usuario no encontrado
+                header("Location: /app/view/recuperarcontrasena.php?status=no_existe");
                 exit();
             }
         }
@@ -76,17 +59,19 @@ class RecuperacionController {
     private function enviarEmail($correo, $codigo, $nombre) {
         $mail = new PHPMailer(true);
         try {
-            $mail->SMTPDebug = 0; 
-    
+            // --- CONFIGURACIÓN DEL SERVIDOR ---
+            // Cambia a SMTP::DEBUG_OFF cuando ya funcione en la otra PC
+            $mail->SMTPDebug = SMTP::DEBUG_SERVER; 
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
             $mail->Username   = 'soporte.rutalarga@gmail.com'; 
-            $mail->Password   = 'lhyrofjopktqkzeh'; 
+            $mail->Password   = 'lhyrofjopktqkzeh'; // Contraseña de aplicación
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = 587;
             $mail->CharSet    = 'UTF-8';
-    
+
+            // --- OPCIONES SSL (CRÍTICO PARA QUE FUNCIONE EN CUALQUIER PC LOCAL) ---
             $mail->SMTPOptions = array(
                 'ssl' => array(
                     'verify_peer' => false,
@@ -94,10 +79,12 @@ class RecuperacionController {
                     'allow_self_signed' => true
                 )
             );
-    
+
+            // --- DESTINATARIOS ---
             $mail->setFrom('soporte.rutalarga@gmail.com', 'Soporte Ruta Larga');
             $mail->addAddress($correo);
-    
+
+            // --- CONTENIDO DEL CORREO ---
             $mail->isHTML(true);
             $mail->Subject = 'Código de recuperación - Ruta Larga';
             $mail->Body    = "
@@ -113,10 +100,13 @@ class RecuperacionController {
             
             return $mail->send();
         } catch (Exception $e) {
+            // El error detallado se imprimirá en pantalla por SMTPDebug
             return false;
         }
     }
 }
 
+// Inicializar y ejecutar el proceso
 $proceso = new RecuperacionController();
 $proceso->manejarPeticion();
+?>
