@@ -60,18 +60,31 @@ class RecuperacionController {
     private function enviarEmail($correo, $codigo, $nombre) {
         $mail = new PHPMailer(true);
         try {
+            // --- CONFIGURACIÓN DE DEPURACIÓN (BORRAR CUANDO FUNCIONE) ---
+            $mail->SMTPDebug = SMTP::DEBUG_SERVER; 
+            // -----------------------------------------------------------
+    
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
             $mail->Username   = 'soporte.rutalarga@gmail.com'; 
-            $mail->Password   = 'lhyrofjopktqkzeh'; // Tu contraseña de aplicación
+            $mail->Password   = 'lhyrofjopktqkzeh'; 
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = 587;
             $mail->CharSet    = 'UTF-8';
-
+    
+            // ESTO SOLUCIONA EL "ERROR DE CONEXIÓN" EN LOCALHOST (XAMPP/WAMP)
+            $mail->SMTPOptions = array(
+                'ssl' => array(
+                    'verify_peer' => false,
+                    'verify_peer_name' => false,
+                    'allow_self_signed' => true
+                )
+            );
+    
             $mail->setFrom('soporte.rutalarga@gmail.com', 'Soporte Ruta Larga');
             $mail->addAddress($correo);
-
+    
             $mail->isHTML(true);
             $mail->Subject = 'Código de recuperación - Ruta Larga';
             $mail->Body    = "
@@ -87,6 +100,7 @@ class RecuperacionController {
             
             return $mail->send();
         } catch (Exception $e) {
+            // Si falla, el error aparecerá en pantalla gracias al SMTPDebug
             return false;
         }
     }

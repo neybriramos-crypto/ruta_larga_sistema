@@ -3,6 +3,9 @@ require_once dirname(__DIR__) . '/controller/reporteController.php';
 
 if (ob_get_length()) ob_end_clean();
 
+header('Strict-Transport-Security: max-age=31536000; includeSubDomains');
+header('X-Frame-Options: DENY');
+header('X-XSS-Protection: 1; mode=block');
 header("Content-Type: application/vnd.ms-excel; charset=utf-8");
 header("Content-Disposition: attachment; filename=Reporte_RutaLarga_" . date('d-m-Y') . ".xls");
 header("Pragma: no-cache");

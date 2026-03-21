@@ -1,11 +1,12 @@
 <?php
 session_start();
+// SEGURIDAD: Si no hay sesión iniciada, lo devolvemos al login
 if (!isset($_SESSION["usuario"])) {
     header("Location: loginView.php");
     exit();
 }
 
-
+// 1. CONEXIÓN (Añadimos reporte de errores)
 mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 try {
     $mysqli = new mysqli("localhost", "root", "", "proyecto");
@@ -13,6 +14,7 @@ try {
     $correoSesion = $_SESSION["usuario"] ?? 'invitado'; 
     $nombreMostrar = "Usuario";
 
+    // 2. PREPARACIÓN
     $stmt = $mysqli->prepare("SELECT Nombre, Apellido FROM usuarios WHERE Email = ?");
 
     $stmt->bind_param("s", $correoSesion);

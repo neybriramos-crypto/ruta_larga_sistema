@@ -20,18 +20,29 @@ class ContrasenaController {
                 return ['mensaje' => 'Las contraseñas no coinciden.', 'error' => true];
             }
 
-            // Encriptamos la clave antes de guardarla
             $hash = password_hash($pass1, PASSWORD_DEFAULT);
 
             if ($modelo->actualizarPassword($id_usuario, $hash)) {
-                // Destruimos la sesión de recuperación para finalizar el proceso
                 session_destroy();
                 
-                // Redirección limpia al login
-                echo "<script>
-                        alert('Contraseña actualizada. Ya puede ingresar al sistema.');
-                        window.location.href = '/app/view/loginView.php';
-                      </script>";
+                echo "
+                <script src='https://cdn.jsdelivr.net/npm/sweetalert2@11'></script>
+                <script>
+                    window.onload = function() {
+                        Swal.fire({
+                            title: '¡Éxito!',
+                            text: 'Contraseña actualizada. Ya puede ingresar al sistema.',
+                            icon: 'success',
+                            confirmButtonText: 'Ir al Login',
+                            confirmButtonColor: '#3085d6',
+                            allowOutsideClick: false
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                window.location.href = '/app/view/loginView.php';
+                            }
+                        });
+                    };
+                </script>";
                 exit();
             } else {
                 return ['mensaje' => 'Error al actualizar en la base de datos.', 'error' => true];
