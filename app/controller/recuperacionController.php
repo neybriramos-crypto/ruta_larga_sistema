@@ -90,11 +90,9 @@ class RecuperacionController {
                 )
             );
 
-            // --- DESTINATARIOS ---
             $mail->setFrom('soporte.rutalarga@gmail.com', 'Soporte Ruta Larga');
             $mail->addAddress($correo);
 
-            // --- CONTENIDO DEL CORREO ---
             $mail->isHTML(true);
             $mail->Subject = 'Código de recuperación - Ruta Larga';
             $mail->Body    = "
@@ -116,7 +114,6 @@ class RecuperacionController {
     }
 }
 
-// Inicializar y ejecutar el proceso
 $proceso = new RecuperacionController();
 $proceso->manejarPeticion();
 ?>
