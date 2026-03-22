@@ -71,7 +71,7 @@ class RecuperacionController {
     private function enviarEmail($correo, $codigo, $nombre) {
         $mail = new PHPMailer(true);
         try {
-            $mail->SMTPDebug = SMTP::DEBUG_SERVER; 
+            $mail->SMTPDebug = 0; // Cambiar a SMTP::DEBUG_SERVER para ver detalles del proceso de envío
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
@@ -107,8 +107,9 @@ class RecuperacionController {
                 </div>";
             
             return $mail->send();
-        } catch (Exception $e) {
-            // El error detallado se imprimirá en pantalla por SMTPDebug
+        } 
+        catch (Exception $e) {
+            error_log("Error al enviar email: " . $mail->ErrorInfo);
             return false;
         }
     }
