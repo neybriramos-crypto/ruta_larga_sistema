@@ -1,6 +1,7 @@
 <?php
-require_once dirname(__DIR__) . '/config/session.php';
 
+session_start();
+require_once dirname(__DIR__) . '/config/session.php';
 $sesion = new SessionManager();
 $sesion->validarSesion();
 

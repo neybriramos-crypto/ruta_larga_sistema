@@ -1,4 +1,9 @@
 <?php
+session_start();
+require_once dirname(__DIR__) . '/config/session.php';
+$sesion = new SessionManager();
+$sesion->validarSesion();
+
 require_once dirname(__DIR__) . '/controller/estadisticasController.php';
 
 $controlador = new EstadisticasController(new EstadisticasModel());

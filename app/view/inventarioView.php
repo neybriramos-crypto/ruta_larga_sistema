@@ -1,5 +1,9 @@
 <?php
 session_start();
+require_once dirname(__DIR__) . '/config/session.php';
+$sesion = new SessionManager();
+$sesion->validarSesion();
+
 error_reporting(E_ALL & ~E_NOTICE & ~E_WARNING);
 require_once dirname(__DIR__) . "/controller/inventarioController.php";
 
